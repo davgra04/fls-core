@@ -30,7 +30,7 @@ This is where fls-core stores configuration and raw data from BandsInTown.
     "config": { "???": "various other config options can be added here"},
     "query_date": 1567827883,
     "raw_data": {
-        # bandsintown raw data
+        <bandsintown_raw_data>
     }
 }
 ```
@@ -82,7 +82,7 @@ Served on `/v1/shows/TX/`
             "city": "Houston",
             "region": "TX"
         },
-        . . .
+        ...
     ]
 }
 ```
@@ -94,11 +94,11 @@ Served on `/v1/artists/`
 
 ```json
 {
-    artists: [
+    "artists": [
         "Tame Impala",
         "King Gizzard and the Lizard Wizard",
         "Unknown Mortal Orchestra",
-        . . .
+        ...
     ]
 }
 
