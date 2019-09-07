@@ -1,0 +1,106 @@
+{
+    "query_date": 1567827883,
+    "region": "TX",
+    "shows": [
+        {
+            "show_id": 0,
+            "artist": "Tame Impala",
+            "date": "Sat 8/31 7:00p",
+            "date_added": 1565826883,
+            "venue": "White Oak Music Hall",
+            "lineup": "White Denim",
+            "city": "Houston",
+            "region": "TX"
+        },
+        {
+            "show_id": 1,
+            "artist": "King Gizzard and the Lizard Wizard",
+            "date": "Sun 9/01 7:30p",
+            "date_added": 1567826883,
+            "venue": "White Oak Music Hall",
+            "lineup": "Mildlife, Orb",
+            "city": "Houston",
+            "region": "TX"
+        },
+        {
+            "show_id": 2,
+            "artist": "Unknown Mortal Orchestra",
+            "date": "Mon 9/02 8:00p",
+            "date_added": 1567826883,
+            "venue": "White Oak Music Hall",
+            "lineup": "Shakey Graves",
+            "city": "Houston",
+            "region": "TX"
+        },
+        {
+            "show_id": 3,
+            "artist": "LCD Sound System",
+            "date": "Mon 9/02 8:00p",
+            "date_added": 1565826883,
+            "venue": "White Oak Music Hall",
+            "lineup": "Shakey Graves",
+            "city": "Houston",
+            "region": "TX"
+        },
+        {
+            "show_id": 4,
+            "artist": "Gorillaz",
+            "date": "Mon 9/02 8:00p",
+            "date_added": 1565826883,
+            "venue": "White Oak Music Hall",
+            "lineup": "Shakey Graves",
+            "city": "Houston",
+            "region": "TX"
+        },
+        {
+            "show_id": 5,
+            "artist": "System of a Down",
+            "date": "Mon 9/02 8:00p",
+            "date_added": 1567826883,
+            "venue": "White Oak Music Hall",
+            "lineup": "Shakey Graves",
+            "city": "Houston",
+            "region": "TX"
+        },
+        {
+            "show_id": 6,
+            "artist": "Weezer",
+            "date": "Mon 9/02 8:00p",
+            "date_added": 1567826883,
+            "venue": "White Oak Music Hall",
+            "lineup": "Shakey Graves",
+            "city": "Houston",
+            "region": "TX"
+        },
+        {
+            "show_id": 7,
+            "artist": "The Beatles",
+            "date": "Mon 9/02 8:00p",
+            "date_added": 1567826883,
+            "venue": "White Oak Music Hall",
+            "lineup": "Shakey Graves",
+            "city": "Houston",
+            "region": "TX"
+        },
+        {
+            "show_id": 8,
+            "artist": "Electric Light Orchestra",
+            "date": "Mon 9/02 8:00p",
+            "date_added": 1565826883,
+            "venue": "White Oak Music Hall",
+            "lineup": "Shakey Graves",
+            "city": "Houston",
+            "region": "TX"
+        },
+        {
+            "show_id": 9,
+            "artist": "Pond",
+            "date": "Mon 9/02 8:00p",
+            "date_added": 1565826883,
+            "venue": "White Oak Music Hall",
+            "lineup": "Shakey Graves",
+            "city": "Houston",
+            "region": "TX"
+        }
+    ]
+}
