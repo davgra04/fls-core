@@ -44,35 +44,49 @@ Show data is structured in a few different ways:
 
 ## Internal Representation
 
+### Config
+
+`config.json`
+
+```json
+{
+    "artists": [ 
+        "...list of followed artists..."
+    ],
+    "bandsintown_query_period_seconds": 3600,
+    // "requests_per_minute": ???
+    // "max_concurrent_requests": ???
+    // "min_request_time": ??? 
+}
+```
+
 ### Primary Data Store
 
 This is where fls-core stores configuration and raw data from BandsInTown.
 
+`data.json`
+
 ```json
 {
-    "followed_artists": [ "...list of followed artists..."],
-    "config": { "???": "various other config options can be added here"},
-
-    "bandsintown_data": {
+    "artist1": {
         "query_date": 1567827883,
-        "artist1": {
-            "events": [
-                // raw event data
-            ],
-            "artist": {
-                // raw artist info data
-            }
-        },
-        "artist2": {
-            "events": [
-                // raw event data
-            ],
-            "artist": {
-                // raw artist info data
-            }
-        },
-        // ...
-    }
+        "events": [
+            // raw event data
+        ],
+        "artist": {
+            // raw artist info data
+        }
+    },
+    "artist2": {
+        "query_date": 1567827883,
+        "events": [
+            // raw event data
+        ],
+        "artist": {
+            // raw artist info data
+        }
+    },
+    // ...
 }
 ```
 

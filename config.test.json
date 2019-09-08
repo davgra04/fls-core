@@ -1,0 +1,17 @@
+{
+    "artists": [
+        "Electric Light Orchestra",
+        "Gorillaz",
+        "King Gizzard and the Lizard Wizard",
+        "LCD Sound System",
+        "Pond",
+        "System of a Down",
+        "Tame Impala",
+        "The Beatles",
+        "Unknown Mortal Orchestra",
+        "Weezer"
+    ],
+    "bandsintown_query_period_seconds": 3600,
+    "bandsintown_rate_limit_ms": 500,
+    "bandsintown_max_concurrent_requests": 3
+}
