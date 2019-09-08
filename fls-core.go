@@ -9,48 +9,110 @@ import (
 	"os"
 )
 
-// config
-////////////////////////////////////////////////////////////////////////////////
-
 // logging
 ////////////////////////////////////////////////////////////////////////////////
 
 var (
-	Trace   *log.Logger
-	Info    *log.Logger
-	Warning *log.Logger
-	Error   *log.Logger
+	trace   *log.Logger
+	info    *log.Logger
+	warning *log.Logger
+	error   *log.Logger
 )
 
+// InitLogging TODO TODO TODO
 func InitLogging(traceHandle io.Writer,
 	infoHandle io.Writer,
 	warningHandle io.Writer,
 	errorHandle io.Writer) {
 
-	Trace = log.New(traceHandle, "[TRACE] ", log.Ldate|log.Ltime|log.Lshortfile)
-	Info = log.New(infoHandle, "[INFO] ", log.Ldate|log.Ltime|log.Lshortfile)
-	Warning = log.New(warningHandle, "[WARNING] ", log.Ldate|log.Ltime|log.Lshortfile)
-	Error = log.New(errorHandle, "[ERROR] ", log.Ldate|log.Ltime|log.Lshortfile)
+	trace = log.New(traceHandle, "[TRACE] ", log.Ldate|log.Ltime|log.Lshortfile)
+	info = log.New(infoHandle, "[INFO] ", log.Ldate|log.Ltime|log.Lshortfile)
+	warning = log.New(warningHandle, "[WARNING] ", log.Ldate|log.Ltime|log.Lshortfile)
+	error = log.New(errorHandle, "[ERROR] ", log.Ldate|log.Ltime|log.Lshortfile)
+}
+
+// config
+////////////////////////////////////////////////////////////////////////////////
+
+// FLSConfig TODO TODO TODO
+type FLSConfig struct {
+	// TODO
 }
 
 // bandsintown
 ////////////////////////////////////////////////////////////////////////////////
 
+// BandsInTownEventData TODO TODO TODO
+type BandsInTownEventData struct {
+	ID             int                    `json:"id"`
+	ArtistID       int                    `json:"artist_id"`
+	URL            string                 `json:"url"`
+	OnSaleDatetime string                 `json:"on_sale_datetime"` // 2017-03-01T18:00:00
+	Datetime       string                 `json:"datetime"`
+	Description    string                 `json:"description"`
+	Venue          *BandsInTownVenueData  `json:"venue"`
+	Offers         []BandsInTownOfferData `json:"offers"`
+	Lineup         []string               `json:"lineup"`
+}
+
+// BandsInTownVenueData TODO TODO TODO
+type BandsInTownVenueData struct {
+	Name      string `json:"name"`
+	Latitude  string `json:"latitude"`
+	Longitude string `json:"longitude"`
+	City      string `json:"city"`
+	Region    string `json:"region"`
+	Country   string `json:"country"`
+}
+
+// BandsInTownOfferData TODO TODO TODO
+type BandsInTownOfferData struct {
+	Type   string `json:"type"`
+	URL    string `json:"url"`
+	Status string `json:"status"`
+}
+
+// BandsInTownArtistData TODO TODO TODO
+type BandsInTownArtistData struct {
+	ID              int    `json:"id"`
+	Name            string `json:"name"`
+	URL             string `json:"url"`
+	ImageURL        string `json:"image_url"`
+	ThumbURL        string `json:"thumb_url"`
+	FacebookPageURL string `json:"facebook_page_url"`
+	MBID            string `json:"mbid"`
+	TrackerCount    int    `json:"tracker_count"`
+}
+
+// BandsInTownData represents the full, raw picture from BandsInTown of an artist and their events
+type BandsInTownData struct {
+	QueryDate int                    `json:"query_date"` // UNIX timestamp for time of last bandsintown API call
+	Artist    BandsInTownArtistData  `json:"artist"`
+	Events    []BandsInTownEventData `json:"events"`
+}
+
 // show data
 ////////////////////////////////////////////////////////////////////////////////
 
-// REST api handles
+// FLSData represents all of the non-cache data in fls-core
+type FLSData struct {
+	Config          *FLSConfig                 `json:"config"`           // Stores fls-core configuration, not sure what to put here yet
+	BandsInTownData map[string]BandsInTownData `json:"bandsintown_data"` // maps artist_name -> bandsintown artist info
+	FollowedArtists []string                   `json:"followed_artists"` // List of followed artists
+}
+
+// REST API handles
 ////////////////////////////////////////////////////////////////////////////////
 
 // RouteRoot displays the name of the service
 func RouteRoot(w http.ResponseWriter, r *http.Request) {
-	Info.Printf("Hit root handler. %v %v\n", r.Method, r.URL)
+	info.Printf("Hit root handler. %v %v\n", r.Method, r.URL)
 	fmt.Fprintf(w, "fls-core")
 }
 
 // RouteGetShows returns a json object containing upcoming shows
 func RouteGetShows(w http.ResponseWriter, r *http.Request) {
-	Info.Printf("Hit shows handler. %v %v\n", r.Method, r.URL)
+	info.Printf("Hit shows handler. %v %v\n", r.Method, r.URL)
 
 	if r.Method != "GET" {
 		w.WriteHeader(http.StatusBadRequest)
@@ -66,7 +128,7 @@ func RouteGetShows(w http.ResponseWriter, r *http.Request) {
 
 // RouteGetArtists returns a json list of followed artists
 func RouteGetArtists(w http.ResponseWriter, r *http.Request) {
-	Info.Printf("Hit artists handler. %v %v\n", r.Method, r.URL)
+	info.Printf("Hit artists handler. %v %v\n", r.Method, r.URL)
 
 	if r.Method != "GET" {
 		w.WriteHeader(http.StatusBadRequest)
@@ -109,7 +171,7 @@ func main() {
 
 	// start serving
 	port := ":8001"
-	Info.Printf("fls-core serving on port %v\n", port)
+	info.Printf("fls-core serving on port %v\n", port)
 	http.ListenAndServe(port, nil)
 
 }

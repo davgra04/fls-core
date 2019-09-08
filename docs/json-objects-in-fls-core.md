@@ -50,18 +50,28 @@ This is where fls-core stores configuration and raw data from BandsInTown.
 
 ```json
 {
-    "artists": [ "...list of followed artists..."],
+    "followed_artists": [ "...list of followed artists..."],
     "config": { "???": "various other config options can be added here"},
-    "query_date": 1567827883,
-    "data": {
-        "artist_name": {
-            "bandsintown_events": [
+
+    "bandsintown_data": {
+        "query_date": 1567827883,
+        "artist1": {
+            "events": [
                 // raw event data
             ],
-            "bandsintown_artist_info": {
+            "artist": {
                 // raw artist info data
-            },
-        }
+            }
+        },
+        "artist2": {
+            "events": [
+                // raw event data
+            ],
+            "artist": {
+                // raw artist info data
+            }
+        },
+        // ...
     }
 }
 ```
