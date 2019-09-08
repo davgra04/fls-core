@@ -10,6 +10,8 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"sort"
+	"strings"
 	"time"
 )
 
@@ -40,8 +42,9 @@ func InitLogging(traceHandle io.Writer,
 
 // BandsInTownEventData TODO TODO TODO
 type BandsInTownEventData struct {
-	ID             int                    `json:"id"`
-	ArtistID       int                    `json:"artist_id"`
+	// fields populated by BandsInTown
+	ID             string                 `json:"id"`
+	ArtistID       string                 `json:"artist_id"`
 	URL            string                 `json:"url"`
 	OnSaleDatetime string                 `json:"on_sale_datetime"` // 2017-03-01T18:00:00
 	Datetime       string                 `json:"datetime"`
@@ -49,6 +52,10 @@ type BandsInTownEventData struct {
 	Venue          *BandsInTownVenueData  `json:"venue"`
 	Offers         []BandsInTownOfferData `json:"offers"`
 	Lineup         []string               `json:"lineup"`
+	// fields populated by fls-data
+	DateAdded   int `json:"date_added"`
+	DateUpdated int `json:"date_updated"`
+	DateRemoved int `json:"date_removed"`
 }
 
 // BandsInTownVenueData TODO TODO TODO
@@ -82,13 +89,16 @@ type BandsInTownArtistData struct {
 
 // BandsInTownData represents the full, raw picture from BandsInTown of an artist and their events
 type BandsInTownData struct {
-	QueryDate int                    `json:"query_date"` // UNIX timestamp for time of last bandsintown API call
+	QueryDate int64                  `json:"query_date"` // UNIX timestamp for time of last bandsintown API call
 	Artist    BandsInTownArtistData  `json:"artist"`
 	Events    []BandsInTownEventData `json:"events"`
 }
 
 // fls objects
 ////////////////////////////////////////////////////////////////////////////////
+
+// global FLSConfig for whole program
+var flscfg *FLSConfig
 
 // FLSConfig represents the input configuration for fls-core
 type FLSConfig struct {
@@ -100,12 +110,74 @@ type FLSConfig struct {
 
 // FLSData represents all of the non-cache data in fls-core
 type FLSData struct {
-	Config          *FLSConfig                 `json:"config"`           // Stores fls-core configuration, not sure what to put here yet
-	BandsInTownData map[string]BandsInTownData `json:"bandsintown_data"` // maps artist_name -> bandsintown artist info
+	BandsInTownData map[string]*BandsInTownData `json:"bandsintown_data"` // maps artist_name -> bandsintown artist info
 }
 
-// GetShowsResponse represents the data returned by the RouteGetShows endpoint
+// FLSEventData represents an artist's show data for a particular region
+type FLSEventData struct {
+	ShowID    string `json:"show_id"`
+	Artist    string `json:"artist"`
+	Date      string `json:"date"`
+	DateAdded string `json:"date_added"`
+	Venue     string `json:"venue"`
+	Lineup    string `json:"lineup"`
+	City      string `json:"city"`
+	Region    string `json:"region"`
+}
+
+// GetShowsResponse represents an artist's show data for a particular region, used by RouteGetShows endpoint
 type GetShowsResponse struct {
+	QueryDate int64          `json:"query_date"`
+	Region    string         `json:"region"`
+	Shows     []FLSEventData `json:"shows"`
+}
+
+// GetCachedShowsResponse TODO TODO TODO
+func GetCachedShowsResponse(region string) string {
+
+	// try to read cached json value, generate if none is there
+	// TODO
+
+	// just generating every time for now...
+	flsdata := ReadFLSData("data.json")
+	Info.Printf("flsdata: %v", flsdata)
+
+	showData := GetShowsResponse{QueryDate: time.Now().Unix(), Region: region}
+
+	for _, artist := range flscfg.Artists {
+		for _, event := range flsdata.BandsInTownData[artist].Events {
+			// Info.Printf("venue: %v", event.Venue)
+			// Info.Printf("region: %v", event.Venue.Region)
+
+			if event.Venue.Region == region {
+				showData.Shows = append(showData.Shows, FLSEventData{
+					ShowID:    event.ID,
+					Artist:    artist,
+					Date:      event.Datetime,
+					DateAdded: string(event.DateAdded),
+					Venue:     event.Venue.Name,
+					Lineup:    strings.Join(event.Lineup, ", "),
+					City:      event.Venue.City,
+					Region:    event.Venue.Region,
+				})
+				Info.Printf("Found a TX show: %v", showData.Shows[len(showData.Shows)-1])
+			}
+		}
+	}
+
+	// sort shows by date
+	sort.SliceStable(showData.Shows, func(i, j int) bool {
+		return showData.Shows[i].Date < showData.Shows[j].Date
+	})
+
+	// marshal to json
+	showDataJSON, err := json.Marshal(showData)
+	if err != nil {
+		Error.Printf("Failed to marshal show data: %v", err)
+	}
+
+	return string(showDataJSON)
+
 }
 
 // GetArtistsResponse represents the data returned by the RouteGetArtists endpoint
@@ -134,7 +206,10 @@ func RouteGetShows(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.WriteHeader(http.StatusOK)
 
-	fmt.Fprintf(w, ReadTestJSON())
+	showDataJSON := GetCachedShowsResponse("TX")
+
+	// fmt.Fprintf(w, ReadTestJSON())
+	fmt.Fprintf(w, showDataJSON)
 }
 
 // RouteGetArtists returns a json list of followed artists
@@ -155,8 +230,13 @@ func RouteGetArtists(w http.ResponseWriter, r *http.Request) {
 // bandsintown query goroutine
 ////////////////////////////////////////////////////////////////////////////////
 
+// ArtistRequest TODO TODO TODO
+type ArtistRequest struct {
+	artist, url string
+}
+
 // PollBandsInTown periodically polls BandsInTown for show data, saves to FLSData, and initiates cache rebuild goroutine
-func PollBandsInTown(flscfg *FLSConfig) {
+func PollBandsInTown() {
 	fmt.Println("called QueryBandsInTown")
 	apiKey := os.Getenv("BANDSINTOWN_API_KEY")
 
@@ -173,7 +253,19 @@ func PollBandsInTown(flscfg *FLSConfig) {
 	}
 
 	// TODO: load from file
-	flsdata := FLSData{}
+	// flsdata := FLSData{}
+
+	// initialize fresh flsdata
+
+	flsdata := FLSData{BandsInTownData: make(map[string]*BandsInTownData)}
+
+	// flsdata := make(map[string]*BandsInTownData)
+	// for _, artist := range flscfg.Artists {
+	// 	flsdata[artist] = &BandsInTownData{}
+	// 	// flsdata[artist] = make(map[string]T)
+	// }
+
+	fmt.Print("HEYO")
 
 	for {
 
@@ -185,21 +277,21 @@ func PollBandsInTown(flscfg *FLSConfig) {
 		//////////////////////
 
 		// load requests into requests channel
-		requests := make(chan string, 1000)
+		requests := make(chan ArtistRequest, 1000)
 		for _, artist := range flscfg.Artists {
 			url := fmt.Sprintf("https://rest.bandsintown.com/artists/%s/events?app_id=%s", url.PathEscape(artist), apiKey)
-			requests <- url
-			Info.Printf("    preparing request for %-40v [%v]", artist, url)
+			requests <- ArtistRequest{url: url, artist: artist}
+			// Info.Printf("    preparing request for %-40v [%v]", artist, url)
 		}
 		close(requests)
 
 		// make requests using limiter
-		for url := range requests {
+		for ar := range requests {
 			<-limiter // wait for limiter
 
 			// build and do request
-			Info.Printf("    requesting %v", url)
-			req, err := http.NewRequest(http.MethodGet, url, nil)
+			Info.Printf("    requesting %-40v [%v]", ar.artist, ar.url)
+			req, err := http.NewRequest(http.MethodGet, ar.url, nil)
 			if err != nil {
 				Error.Printf("Could not create request object: %v", err)
 				continue
@@ -218,7 +310,41 @@ func PollBandsInTown(flscfg *FLSConfig) {
 				continue
 			}
 
-			Info.Printf("    response: %v", string(body))
+			// Info.Printf("    response: %v", string(body))
+
+			// parse response
+			var events []BandsInTownEventData
+			err = json.Unmarshal(body, &events)
+			if err != nil {
+				Error.Printf("Could not parse JSON in response: %v", err)
+			}
+
+			// write events to flsdata
+
+			if _, ok := flsdata.BandsInTownData[ar.artist]; !ok {
+				flsdata.BandsInTownData[ar.artist] = &BandsInTownData{QueryDate: time.Now().Unix()}
+			}
+
+			flsdata.BandsInTownData[ar.artist].Events = events
+
+			// for _, e := range events {
+
+			// 	flsdata[ar.artist].Events = append(flsdata[ar.artist].Events, e)
+			// }
+
+		}
+
+		// save data to data.json
+		///////////////////////////
+		flsdataJSON, err := json.Marshal(flsdata)
+		if err != nil {
+			Error.Printf("UH OH")
+			os.Exit(1)
+		}
+		err = ioutil.WriteFile("data.json", flsdataJSON, 0666)
+		if err != nil {
+			Error.Printf("UH OH")
+			os.Exit(1)
 		}
 
 		// TODO: update the event id index to track a number of things about shows:
@@ -226,8 +352,7 @@ func PollBandsInTown(flscfg *FLSConfig) {
 		//     * which shows have disappeared from bandsintown
 		//     * which shows have changed information
 
-		// save data to FLSData
-		/////////////////////////
+		// flsdata.BandsInTownData.Events = ""
 
 		// trigger cache rebuild goroutine
 		////////////////////////////////////
@@ -263,6 +388,23 @@ func ReadTestJSON() string {
 	return string(dat)
 }
 
+// ReadFLSData TODO TODO TODO
+func ReadFLSData(flsdataPath string) *FLSData {
+
+	data, err := ioutil.ReadFile("data.json")
+	if err != nil {
+		Error.Panic(err)
+	}
+
+	flsdata := &FLSData{}
+	err = json.Unmarshal(data, &flsdata)
+	if err != nil {
+		Error.Panicf("Failed to unmarshal %v: %v", flsdataPath, err)
+	}
+
+	return flsdata
+}
+
 // main
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -294,16 +436,14 @@ func main() {
 	}
 	fmt.Printf("%v\n\n", string(configJSON))
 
-	var cfg FLSConfig
-	err = json.Unmarshal(configJSON, &cfg)
+	err = json.Unmarshal(configJSON, &flscfg)
 	if err != nil {
 		Error.Printf("Could not parse JSON in %v: %v", *configPath, err)
 	}
-	Info.Printf("cfg: %v", cfg)
+	Info.Printf("flscfg: %v", flscfg)
 
 	// launch goroutines
-	PollBandsInTown(&cfg)
-	os.Exit(0)
+	// go PollBandsInTown()
 
 	// set routes
 	http.HandleFunc("/", RouteRoot)
@@ -311,7 +451,7 @@ func main() {
 	http.HandleFunc("/v1/artists", RouteGetArtists)
 
 	// start serving
-	port := ":8001"
+	port := "localhost:8001"
 	Info.Printf("fls-core serving on port %v\n", port)
 	http.ListenAndServe(port, nil)
 

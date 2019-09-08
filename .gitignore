@@ -1,2 +1,4 @@
 fls-core
 *.secret
+data.json
+config.json

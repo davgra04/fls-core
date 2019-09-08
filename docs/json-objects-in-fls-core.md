@@ -68,25 +68,30 @@ This is where fls-core stores configuration and raw data from BandsInTown.
 
 ```json
 {
-    "artist1": {
-        "query_date": 1567827883,
-        "events": [
-            // raw event data
-        ],
-        "artist": {
-            // raw artist info data
-        }
-    },
-    "artist2": {
-        "query_date": 1567827883,
-        "events": [
-            // raw event data
-        ],
-        "artist": {
-            // raw artist info data
-        }
-    },
-    // ...
+    "bandsintown_data": {
+
+        "artist1": {
+            "query_date": 1567827883,
+            "events": [
+                // raw bandsintown event data
+            ],
+            "artist": {
+                // raw bandsintown artist info data
+            }
+        },
+        
+        "artist2": {
+            "query_date": 1567827883,
+            "events": [
+                // raw bandsintown event data
+            ],
+            "artist": {
+                // raw bandsintown artist info data
+            }
+        },
+        
+        // ...
+    }
 }
 ```
 
