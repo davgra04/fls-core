@@ -15,6 +15,12 @@ import (
 	"time"
 )
 
+// globals
+////////////////////////////////////////////////////////////////////////////////
+
+// global FLSConfig for whole program
+var flscfg *FLSConfig
+
 // logging
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -96,9 +102,6 @@ type BandsInTownData struct {
 
 // fls objects
 ////////////////////////////////////////////////////////////////////////////////
-
-// global FLSConfig for whole program
-var flscfg *FLSConfig
 
 // FLSConfig represents the input configuration for fls-core
 type FLSConfig struct {
@@ -224,7 +227,13 @@ func RouteGetArtists(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.WriteHeader(http.StatusOK)
-	fmt.Fprintf(w, `["Electric Light Orchestra","Gorillaz","King Gizzard and the Lizard Wizard","LCD Sound System","Pond","System of a Down","Tame Impala","The Beatles","Unknown Mortal Orchestra","Weezer"]`)
+
+	artistJSON, err := json.Marshal(flscfg.Artists)
+	if err != nil {
+		fmt.Fprintf(w, `{"error": "could not marshal json"}`)
+	}
+
+	fmt.Fprintf(w, string(artistJSON))
 }
 
 // bandsintown query goroutine
