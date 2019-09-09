@@ -420,7 +420,24 @@ func ReadFLSData(flsdataPath string) *FLSData {
 func main() {
 
 	// initialize logging
-	InitLogging(ioutil.Discard, os.Stdout, os.Stdout, os.Stderr)
+	logPath := "log.txt"
+	logFile, err := os.OpenFile(logPath, os.O_CREATE|os.O_APPEND|os.O_RDWR, 0666)
+	if err != nil {
+		panic(fmt.Sprintf("Could not open logfile %v: %v", logPath, err))
+	}
+
+	// InitLogging(
+	// 	ioutil.Discard,
+	// 	os.Stdout,
+	// 	os.Stdout,
+	// 	os.Stderr,
+	// )
+	InitLogging(
+		ioutil.Discard,
+		io.MultiWriter(os.Stdout, logFile),
+		io.MultiWriter(os.Stdout, logFile),
+		io.MultiWriter(os.Stderr, logFile),
+	)
 
 	// handle flags
 	configPath := flag.String("c", "", "path to the fls-core config file")
