@@ -477,7 +477,7 @@ func main() {
 	http.HandleFunc("/v1/artists", RouteGetArtists)
 
 	// start serving
-	port := "localhost:8001"
+	port := ":8001"
 	Info.Printf("fls-core serving on port %v\n", port)
 	http.ListenAndServe(port, nil)
 
