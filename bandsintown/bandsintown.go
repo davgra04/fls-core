@@ -16,9 +16,9 @@ type BandsInTownEventData struct {
 	Offers         []BandsInTownOfferData `json:"offers"`
 	Lineup         []string               `json:"lineup"`
 	// fields populated by fls-data
-	DateAdded   int `json:"date_added"`
-	DateUpdated int `json:"date_updated"`
-	DateRemoved int `json:"date_removed"`
+	DateAdded   int64 `json:"date_added"`
+	DateUpdated int64 `json:"date_updated"`
+	DateRemoved int64 `json:"date_removed"`
 }
 
 // BandsInTownVenueData TODO TODO TODO

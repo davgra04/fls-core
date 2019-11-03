@@ -21,6 +21,7 @@ import (
 // FLSData represents all of the non-cache data in fls-core
 type FLSData struct {
 	BandsInTownData map[string]*bandsintown.BandsInTownData `json:"bandsintown_data"` // maps artist_name -> bandsintown artist info
+	ShowIDsSeen     map[string]int64                        // keeps track of which ShowIDs have been seen before, maps ShowID -> time first seen (UNIX timestamp)
 }
 
 // FLSEventData represents an artist's show data for a particular region
@@ -28,7 +29,7 @@ type FLSEventData struct {
 	ShowID    string `json:"show_id"`
 	Artist    string `json:"artist"`
 	Date      string `json:"date"`
-	DateAdded string `json:"date_added"`
+	DateAdded int64  `json:"date_added"`
 	Venue     string `json:"venue"`
 	Lineup    string `json:"lineup"`
 	City      string `json:"city"`
@@ -69,7 +70,7 @@ func GetCachedShowsResponse(region string) string {
 					ShowID:    event.ID,
 					Artist:    artist,
 					Date:      event.Datetime,
-					DateAdded: string(event.DateAdded),
+					DateAdded: event.DateAdded,
 					Venue:     event.Venue.Name,
 					Lineup:    strings.Join(event.Lineup, ", "),
 					City:      event.Venue.City,
@@ -99,13 +100,21 @@ func GetCachedShowsResponse(region string) string {
 type GetArtistsResponse struct {
 }
 
+// saving/loading flsdata from disk
+////////////////////////////////////////////////////////////////////////////////
+
 // ReadFLSData TODO TODO TODO
 func ReadFLSData(flsdataPath string) *FLSData {
 
 	// data, err := ioutil.ReadFile("data.json")
 	data, err := ioutil.ReadFile(flsdataPath)
 	if err != nil {
-		common.Error.Panicf("Could not read %v: %v", flsdataPath, err)
+		common.Error.Printf("Could not read %v: %v", flsdataPath, err)
+		common.Error.Printf("Initializing new flsdata object")
+		return &FLSData{
+			BandsInTownData: make(map[string]*bandsintown.BandsInTownData),
+			ShowIDsSeen:     make(map[string]int64),
+		}
 	}
 
 	flsdata := &FLSData{}
@@ -115,6 +124,20 @@ func ReadFLSData(flsdataPath string) *FLSData {
 	}
 
 	return flsdata
+}
+
+// WriteFLSData TODO TODO TODO
+func WriteFLSData(flsdataPath string, flsdata *FLSData) {
+	flsdataJSON, err := json.Marshal(flsdata)
+	if err != nil {
+		common.Error.Printf("UH OH")
+		os.Exit(1)
+	}
+	err = ioutil.WriteFile("data.json", flsdataJSON, 0666)
+	if err != nil {
+		common.Error.Printf("UH OH")
+		os.Exit(1)
+	}
 }
 
 // cache rebuild goroutine
@@ -134,7 +157,7 @@ type ArtistRequest struct {
 }
 
 // PollBandsInTown periodically polls BandsInTown for show data, saves to FLSData, and initiates cache rebuild goroutine
-func PollBandsInTown(region string) {
+func PollBandsInTown() {
 	fmt.Println("called QueryBandsInTown")
 	apiKey := os.Getenv("BANDSINTOWN_API_KEY")
 
@@ -155,7 +178,8 @@ func PollBandsInTown(region string) {
 
 	// initialize fresh flsdata
 
-	flsdata := FLSData{BandsInTownData: make(map[string]*bandsintown.BandsInTownData)}
+	// flsdata := FLSData{BandsInTownData: make(map[string]*bandsintown.BandsInTownData)}
+	flsdata := ReadFLSData("data.json")
 
 	// flsdata := make(map[string]*BandsInTownData)
 	// for _, artist := range common.Cfg.Artists {
@@ -187,7 +211,7 @@ func PollBandsInTown(region string) {
 		for ar := range requests {
 			<-limiter // wait for limiter
 
-			// build and do request
+			// build and make request
 			common.Info.Printf("    requesting %-40v [%v]", ar.artist, ar.url)
 			req, err := http.NewRequest(http.MethodGet, ar.url, nil)
 			if err != nil {
@@ -217,33 +241,31 @@ func PollBandsInTown(region string) {
 				common.Error.Printf("Could not parse JSON in response: %v", err)
 			}
 
-			// write events to flsdata
+			// check for new ShowIDs
+			for eIdx, e := range events {
+				if _, ok := flsdata.ShowIDsSeen[e.ID]; !ok {
+					// haven't seen this ShowID before, set DateAdded and add to ShowIDsSeen
+					common.Info.Printf("        New show! (ShowID: %v)", e.ID)
+					flsdata.ShowIDsSeen[e.ID] = startTime.Unix()
+					events[eIdx].DateAdded = startTime.Unix()
+				} else {
+					events[eIdx].DateAdded = flsdata.ShowIDsSeen[e.ID]
+				}
+			}
 
+			// write events to flsdata
 			if _, ok := flsdata.BandsInTownData[ar.artist]; !ok {
+				// initialize BandsInTownData object if not in map
 				flsdata.BandsInTownData[ar.artist] = &bandsintown.BandsInTownData{QueryDate: time.Now().Unix()}
 			}
 
 			flsdata.BandsInTownData[ar.artist].Events = events
 
-			// for _, e := range events {
-
-			// 	flsdata[ar.artist].Events = append(flsdata[ar.artist].Events, e)
-			// }
-
 		}
 
 		// save data to data.json
 		///////////////////////////
-		flsdataJSON, err := json.Marshal(flsdata)
-		if err != nil {
-			common.Error.Printf("UH OH")
-			os.Exit(1)
-		}
-		err = ioutil.WriteFile("data.json", flsdataJSON, 0666)
-		if err != nil {
-			common.Error.Printf("UH OH")
-			os.Exit(1)
-		}
+		WriteFLSData("data.json", flsdata)
 
 		// TODO: update the event id index to track a number of things about shows:
 		//     * which shows are new

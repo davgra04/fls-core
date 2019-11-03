@@ -116,7 +116,7 @@ func main() {
 	common.ReadConfig(configPath)
 
 	// launch goroutines
-	// go fls.PollBandsInTown()
+	go fls.PollBandsInTown()
 
 	// set routes
 	http.HandleFunc("/", RouteRoot)
