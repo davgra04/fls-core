@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/fatih/color"
 	"gitlab.devgru.cc/devgru/fls-core/common"
 	"gitlab.devgru.cc/devgru/fls-core/fls"
 )
@@ -93,12 +92,7 @@ func main() {
 	// handle flags
 	configPath := flag.String("c", "", "path to the fls-core config file")
 	localOnly := flag.Bool("l", false, "listen on localhost only")
-	flagNoColor := flag.Bool("no-color", false, "disable color output")
 	flag.Parse()
-
-	if *flagNoColor {
-		color.NoColor = true // disables colorized output
-	}
 
 	if *configPath == "" {
 		common.Error.Printf("Must provide path to config!")
