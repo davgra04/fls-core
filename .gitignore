@@ -2,3 +2,6 @@ fls-core
 *.secret
 data.json
 config.json
+data.sql
+log.txt
+old/
