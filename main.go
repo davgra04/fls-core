@@ -4,6 +4,7 @@ import (
 	"flag"
 	"net/http"
 	"os"
+	"time"
 
 	"gitlab.devgru.cc/devgru/fls-core/fls"
 )
@@ -26,6 +27,23 @@ func handleFlagsAndEnv() (string, bool) {
 	return *configPath, *localOnly
 }
 
+func initialize(configPath, dbPath string) {
+	// read config
+	fls.ReadConfig(configPath)
+
+	// set bandsintown API key
+	fls.APIKey = os.Getenv("BANDSINTOWN_API_KEY")
+
+	// set up bandsintown HTTP client
+	fls.BandsInTownClient = &http.Client{
+		Timeout: 10 * time.Second,
+	}
+
+	// set up DAO, init DB if necessary
+	fls.DAO = fls.NewSqliteDAO(dbPath)
+}
+
+////////////////////////////////////////////////////////////////////////////////
 // main
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -35,21 +53,19 @@ func main() {
 
 	// handle flags and check env vars
 	configPath, localOnly := handleFlagsAndEnv()
+	dbPath := "data.sql"
 
-	// read config
-	fls.ReadConfig(configPath)
-
-	// init DB if necessary
-	fls.InitializeDatabase()
-	defer fls.DB.Close()
+	// initialize
+	initialize(configPath, dbPath)
+	defer fls.DAO.Close()
 
 	// launch bandsintown polling goroutine
 	// go fls.PollBandsInTown()
 
 	// set routes
 	http.HandleFunc("/", fls.RouteRoot)
-	http.HandleFunc("/v1/artists", fls.RouteArtists)
-	// http.HandleFunc("/v1/shows", fls.RouteShows)
+	http.HandleFunc("/artists", fls.RouteArtists)
+	// http.HandleFunc("/shows", fls.RouteShows)
 
 	// serve
 	addr := ":8001"

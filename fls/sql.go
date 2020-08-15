@@ -7,81 +7,20 @@ import (
 	"os"
 	"strings"
 
+	"github.com/jmoiron/sqlx"
 	_ "github.com/mattn/go-sqlite3" // using sqlite
 )
 
-// DB is the global sql database object
-var DB *sql.DB
-var dbPath string = "data.sql"
-
-////////////////////////////////////////////////////////////////////////////////
-// DB access methods
-////////////////////////////////////////////////////////////////////////////////
-
-func addArtists(artists []string) error {
-	if len(artists) == 0 {
-		return nil
-	}
-
-	// being transaction
-	tx, err := DB.Begin()
-	if err != nil {
-		return err
-	}
-
-	// perform inserts
-	for _, a := range artists {
-
-		a = strings.TrimSpace(a)
-
-		rows, err := tx.Query(`SELECT name FROM artists WHERE LOWER(name) LIKE ?`, strings.ToLower(a))
-		if err != nil {
-			_ = tx.Rollback()
-			return err
-		}
-
-		if rows.Next() {
-			Info.Printf("    already have artist entry for %v\n", a)
-			continue
-		}
-
-		_, err = tx.Exec(`INSERT INTO artists (name) VALUES (?)`, a)
-		if err != nil {
-			_ = tx.Rollback()
-			return err
-		}
-	}
-
-	// complete transaction
-	if err := tx.Commit(); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func getArtists() ([]string, error) {
-	rows, err := DB.Query(`SELECT name FROM artists`)
-	if err != nil {
-		return nil, err
-	}
-
-	artists := []string{}
-
-	for rows.Next() {
-		var a string
-		rows.Scan(&a)
-		artists = append(artists, a)
-	}
-
-	return artists, nil
+// DBAccessObject handles interactions with the database
+type DBAccessObject struct {
+	db *sqlx.DB
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 // init
 ////////////////////////////////////////////////////////////////////////////////
 
-func createNewDatabase() {
+func initSqliteDatabase(dbPath string) {
 	schemaPath := "sql/schema0.sql"
 	schemaSQL, err := ioutil.ReadFile(schemaPath)
 	if err != nil {
@@ -100,8 +39,9 @@ func createNewDatabase() {
 	}
 }
 
-// InitializeDatabase creates a new sqlite database if none exists
-func InitializeDatabase() {
+// NewSqliteDAO creates a new sqlite database access object and initializes the
+// database itself if it does not exist
+func NewSqliteDAO(dbPath string) *DBAccessObject {
 	var err error
 
 	if _, err := os.Stat(dbPath); err == nil {
@@ -110,14 +50,71 @@ func InitializeDatabase() {
 	} else if os.IsNotExist(err) {
 		// path does not exist
 		Info.Printf("creating new database at %v\n", dbPath)
-		createNewDatabase()
+		initSqliteDatabase(dbPath)
 	} else {
 		// file may or may not exists, could be permissions?
 		Error.Fatalf("problem determining if database at %v exists\n", dbPath)
 	}
 
-	DB, err = sql.Open("sqlite3", dbPath)
+	db, err := sqlx.Connect("sqlite3", dbPath)
 	if err != nil {
 		log.Fatalf("problem opening sqlite db: %v\n", err)
 	}
+
+	return &DBAccessObject{db: db}
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// DBAccessObject methods
+////////////////////////////////////////////////////////////////////////////////
+
+// Close closes the database handle
+func (dao *DBAccessObject) Close() error {
+	return dao.db.Close()
+}
+
+//////////////////////////////////////// artists table
+
+func (dao *DBAccessObject) addArtist(artist *BandsInTownArtist) error {
+	r, err := dao.db.NamedExec("INSERT INTO artists (name, bit_id, url, image_url, thumb_url, facebook_page_url, mbid, updated) VALUES (:name, :bit_id, :url, :image_url, :thumb_url, :facebook_page_url, :mbid, :updated)", artist)
+	if err != nil {
+		return err
+	}
+
+	id, err := r.LastInsertId()
+	if err != nil {
+		return err
+	}
+
+	artist.ID = id
+	return err
+}
+
+func (dao *DBAccessObject) getArtistList() ([]string, error) {
+	artists := []string{}
+
+	err := dao.db.Select(&artists, `SELECT name FROM artists`)
+	if err != nil {
+		return nil, err
+	}
+
+	return artists, nil
+}
+
+//////////////////////////////////////// aliases table
+
+func (dao *DBAccessObject) addAlias(alias, artistID string) error {
+	_, err := dao.db.Exec("INSERT INTO aliases (alias, artist_id) VALUES (?, ?)", strings.ToLower(alias), artistID)
+	return err
+}
+
+func (dao *DBAccessObject) getAliasList() ([]string, error) {
+	aliases := []string{}
+
+	err := dao.db.Select(&aliases, `SELECT alias FROM aliases`)
+	if err != nil {
+		return nil, err
+	}
+
+	return aliases, nil
 }

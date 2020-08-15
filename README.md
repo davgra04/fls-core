@@ -1,16 +1,31 @@
 fls-core
 ========
 
-This microservice is responsible for querying the bandsintown API, maintaining a list of shows, and serving the data through a REST API.
+This microservice acts as a proxy for the Bandsintown API maintaining information for a subset of artists. The REST API serves information on artists and their events, as well as accepts new artists to query Bandsintown for.
 
-## Running
+## Endpoints
 
-```
-fls-core.go -c config.test.json
-```
+### `GET /artists`
 
-## Docs
+Returns list of tracked artists
 
-* [List of JSON Objects in fls-core](docs/json-objects-in-fls-core.md)
+### `POST /artists`
 
-* [Notes on querying the BandsInTown API](docs/bandsintown-api-notes.md)
+Adds artists to list of tracked artists
+
+Parameters:
+* artists *(POST body)* - A comma-separated list of artists
+
+### `GET /artistinfo/{artistname}`
+
+Returns information about an artist
+
+Parameters:
+* artistname *(query)* - The name of the artist
+
+### `GET /events/{artistname}`
+
+Returns upcoming events for an artist
+
+Parameters:
+* artistname *(query)* - The name of the artist

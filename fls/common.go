@@ -7,20 +7,24 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"time"
 )
 
+////////////////////////////////////////////////////////////////////////////////
 // config
 ////////////////////////////////////////////////////////////////////////////////
 
 // Cfg is the global FLSConfig for whole program
-var Cfg *FLSConfig
+var Cfg *Config
 
-// FLSConfig represents the input configuration for fls-core
-type FLSConfig struct {
-	Artists               []string `json:"artists"`                             // List of followed artists
-	RefreshPeriodSeconds  int      `json:"bandsintown_query_period_seconds"`    // number of seconds between FLSData refreshes
-	RateLimitMillis       int      `json:"bandsintown_rate_limit_ms"`           // limit on the number of BandsInTown API requests per second
-	MaxConcurrentRequests int      `json:"bandsintown_max_concurrent_requests"` // maximum number of concurrent requests to the BandsInTown API
+// APIKey is the bandsintown REST API key
+var APIKey string
+
+// Config represents the input configuration for fls-core
+type Config struct {
+	RefreshPeriodSeconds int           `json:"bandsintown_refresh_period_seconds"` // number of seconds between events refresh
+	RequestsPerSecond    float32       `json:"bandsintown_requests_per_second"`    // limit on the number of BandsInTown API requests per second
+	RPSPeriod            time.Duration `json:"-"`                                  // period for RequestsPerSecond
 }
 
 // ReadConfig asdf
@@ -34,8 +38,12 @@ func ReadConfig(configPath string) {
 	if err != nil {
 		Error.Fatalf("Could not parse JSON in %v: %v", configPath, err)
 	}
+
+	Cfg.RPSPeriod = time.Duration(1000.0/Cfg.RequestsPerSecond) * time.Millisecond
+	Info.Printf("Cfg.RPSPeriod: %v\n", Cfg.RPSPeriod)
 }
 
+////////////////////////////////////////////////////////////////////////////////
 // logging
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -66,3 +74,10 @@ func InitLogging() {
 	Error = log.New(errorHandle, "[ERROR] ", log.Ldate|log.Ltime)
 
 }
+
+////////////////////////////////////////////////////////////////////////////////
+// database access object
+////////////////////////////////////////////////////////////////////////////////
+
+// DAO is the global database access object
+var DAO *DBAccessObject

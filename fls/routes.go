@@ -15,12 +15,11 @@ func RouteRoot(w http.ResponseWriter, r *http.Request) {
 
 // RouteArtists returns a json list of followed artists
 func RouteArtists(w http.ResponseWriter, r *http.Request) {
-
 	if r.Method == "GET" {
 		Info.Println("GET artists")
 
 		// get artist list
-		artists, err := getArtists()
+		artists, err := getArtistList()
 		if err != nil {
 			Error.Printf("Failed to read artists: %v\n", err)
 			http.Error(w, "failed to get artists", 500)
@@ -39,6 +38,7 @@ func RouteArtists(w http.ResponseWriter, r *http.Request) {
 
 		fmt.Fprint(w, string(json))
 		return
+
 	} else if r.Method == "POST" {
 		Info.Println("POST artists")
 
@@ -47,33 +47,17 @@ func RouteArtists(w http.ResponseWriter, r *http.Request) {
 
 		// TODO: validate input
 
-		artistList := strings.Split(artists, ",")
-		if err := addArtists(artistList); err != nil {
-			Error.Printf("Failed to add artists: %v\n", err)
-		}
+		go func() {
+			artistList := strings.Split(artists, ",")
+			if err := addArtists(artistList); err != nil {
+				Error.Printf("Failed to add artists: %v\n", err)
+			}
+		}()
 
 		return
 	}
 
 	http.Error(w, "method not allowed", 405)
-
-	// Info.Printf("%v %v\n", r.Method, r.URL)
-
-	// if r.Method != "GET" {
-	// 	w.WriteHeader(http.StatusBadRequest)
-	// 	return
-	// }
-
-	// w.Header().Set("Content-Type", "application/json")
-	// w.Header().Set("Access-Control-Allow-Origin", "*")
-	// w.WriteHeader(http.StatusOK)
-
-	// artistJSON, err := json.Marshal(Cfg.Artists)
-	// if err != nil {
-	// 	fmt.Fprintf(w, `{"error": "could not marshal json"}`)
-	// }
-
-	// fmt.Fprintf(w, string(artistJSON))
 }
 
 // // RouteShows returns a json object containing upcoming shows
